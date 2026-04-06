@@ -2,9 +2,17 @@
 
 import { useUser } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
+import { useState } from "react";
+import FilterPanel from "@/components/FilterPanel";
+import ResultsTable from "@/components/ResultsTable";
+import type { DpaApiRequest, DpaApiResponse } from "@/lib/dpa-types";
+import { queryDpaApi } from "@/lib/dpa-client";
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
+  const [results, setResults] = useState<DpaApiResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>();
 
   if (!isLoaded) {
     return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
@@ -14,8 +22,24 @@ export default function Dashboard() {
     redirect("/sign-in");
   }
 
+  const handleSearch = async (params: DpaApiRequest) => {
+    setIsLoading(true);
+    setError(undefined);
+    setResults(null);
+
+    const { data, error: apiError } = await queryDpaApi(params);
+
+    if (apiError) {
+      setError(apiError);
+    } else if (data) {
+      setResults(data);
+    }
+
+    setIsLoading(false);
+  };
+
   return (
-    <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
       <header
         style={{
           display: "flex",
@@ -24,18 +48,43 @@ export default function Dashboard() {
           marginBottom: "2rem",
         }}
       >
-        <h1>Dashboard</h1>
+        <h1>Digital Policy Tracker</h1>
         <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <span>{user.emailAddresses[0]?.emailAddress}</span>
+          <span style={{ fontSize: "0.875rem", color: "#666" }}>
+            {user.emailAddresses[0]?.emailAddress}
+          </span>
           <a href="/" style={{ color: "inherit", textDecoration: "none" }}>
             Home
           </a>
         </div>
       </header>
 
-      <section style={{ padding: "2rem", background: "#f5f5f5", borderRadius: "8px" }}>
-        <p>Welcome to the Digital Policy Tracker. API interface coming soon.</p>
+      <section style={styles.content}>
+        <FilterPanel onSearch={handleSearch} isLoading={isLoading} />
       </section>
+
+      {results && (
+        <section style={styles.results}>
+          <h2 style={styles.resultsTitle}>
+            Results {results.length > 0 && `(${results.length})`}
+          </h2>
+          <ResultsTable data={results} isLoading={isLoading} error={error} />
+        </section>
+      )}
     </main>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  content: {
+    marginBottom: "2rem",
+  },
+  results: {
+    marginTop: "2rem",
+  },
+  resultsTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    marginBottom: "1rem",
+  },
+};

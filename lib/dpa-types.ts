@@ -19,14 +19,15 @@ export interface DpaApiRequest {
     keep_implementation_level?: boolean;
     eligible_firms?: number[];
     keep_eligible_firms?: boolean;
-    announcement_period?: [string, string | null];
-    implementation_period?: [string, string | null];
+    announcement_period?: [string | null, string | null];
+    implementation_period?: [string | null, string | null];
     keep_implementation_na?: boolean;
     revocation_period?: [string, string | null];
     keep_revocation_na?: boolean;
     submission_period?: [string, string | null];
     in_force_on_date?: string;
     keep_in_force_on_date?: boolean;
+    in_force_today?: boolean;
     affected_sectors?: number[];
     keep_affected_sectors?: boolean;
     affected_products?: number[];
