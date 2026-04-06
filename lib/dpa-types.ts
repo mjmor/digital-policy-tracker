@@ -1,85 +1,136 @@
-// Types for the DPA API
+// Types for the DPA Events API
 
 export interface DpaApiRequest {
   limit?: number;
   offset?: number;
   sorting?: string;
   request_data?: {
-    gta_evaluation?: number[];
-    affected_flow?: number[];
-    affected?: number[];
-    keep_affected?: boolean;
-    implementer?: number[];
-    keep_implementer?: boolean;
-    intervention_types?: number[];
-    keep_intervention_types?: boolean;
-    mast_chapters?: number[];
-    keep_mast_chapters?: boolean;
+    implementing_jurisdiction?: number[];
+    economic_activity?: number[];
+    government_branch?: number[];
+    event_type?: number[];
+    policy_area?: number[];
     implementation_level?: number[];
-    keep_implementation_level?: boolean;
-    eligible_firms?: number[];
-    keep_eligible_firms?: boolean;
-    announcement_period?: [string | null, string | null];
-    implementation_period?: [string | null, string | null];
-    keep_implementation_na?: boolean;
-    revocation_period?: [string, string | null];
-    keep_revocation_na?: boolean;
-    submission_period?: [string, string | null];
-    in_force_on_date?: string;
-    keep_in_force_on_date?: boolean;
-    in_force_today?: boolean;
-    affected_sectors?: number[];
-    keep_affected_sectors?: boolean;
-    affected_products?: number[];
-    keep_affected_products?: boolean;
-    intervention_id?: number[];
-    keep_intervention_id?: boolean;
-    lag_adjustment?: string;
+    event_period?: [string, string | null];
   };
 }
 
-export interface Jurisdiction {
+export interface DpaEvent {
   id: number;
-  name: string;
-  iso: string;
-}
-
-export interface JurisdictionGroup {
-  name: string;
-}
-
-export interface AffectedProduct {
-  product_id: number;
-  prior_level: string;
-  new_level: string;
-  unit: string | null;
-}
-
-export interface DpaIntervention {
-  intervention_id: number;
-  state_act_id: number;
-  state_act_title: string;
-  intervention_url: string;
-  state_act_url: string;
-  gta_evaluation: string;
-  implementing_jurisdictions: Jurisdiction[];
-  implementing_jurisdiction_groups: JurisdictionGroup[];
-  affected_jurisdictions: Jurisdiction[];
-  inferred_jurisdictions: string;
+  title: string;
+  url: string;
+  description: string;
+  date: string;
+  status: string;
+  event_type: string;
+  action_type: string;
+  implementers: { name: string; id: number }[];
+  implementer_groups: { name: string }[];
+  policy_area: string;
+  policy_instrument: string;
+  economic_activities: { name: string; id: number }[];
   implementation_level: string;
-  eligible_firm: string;
-  intervention_type: string;
-  mast_chapter: string;
-  mast_subchapter: string;
-  affected_sectors: number[];
-  affected_products: number[] | AffectedProduct[];
-  date_announced: string | null;
-  date_published: string | null;
-  date_implemented: string | null;
-  date_removed: string | null;
-  is_in_force: number;
 }
 
-export interface DpaApiResponse extends Array<DpaIntervention> {}
+export interface DpaApiResponse extends Array<DpaEvent> {}
 
-export type { DpaIntervention as Intervention };
+// Value mappings for DPA filters
+export const ECONOMIC_ACTIVITY: Record<number, string> = {
+  1: "cross-cutting",
+  2: "infrastructure provider: internet and telecom services",
+  4: "online advertising provider",
+  5: "digital payment provider",
+  6: "platform intermediary: user-generated content",
+  7: "streaming service provider",
+  8: "platform intermediary: e-commerce",
+  9: "ML and AI development",
+  10: "other service provider",
+  11: "unspecified",
+  12: "technological consumer goods",
+  13: "semiconductors",
+  14: "software provider: app stores",
+  15: "DLT development",
+  16: "search service provider",
+  17: "software provider: other software",
+  18: "messaging service provider",
+  19: "platform intermediary: other",
+  20: "infrastructure provider: cloud computing",
+  21: "infrastructure provider: network hardware",
+  22: "infrastructure provider: other",
+};
+
+export const GOVERNMENT_BRANCH: Record<number, string> = {
+  1: "legislature",
+  2: "executive",
+  3: "judiciary",
+};
+
+export const EVENT_TYPE: Record<number, string> = {
+  1: "order",
+  2: "outline",
+  3: "inquiry",
+  4: "decision",
+  5: "law",
+  6: "treaty",
+  8: "public lawsuit",
+  9: "investigation",
+  10: "declaration",
+  11: "civil lawsuit",
+};
+
+export const POLICY_AREA: Record<number, string> = {
+  1: "International trade",
+  2: "Competition",
+  3: "Content moderation",
+  4: "Data governance",
+  5: "Subsidies and industrial policy",
+  6: "Instrument unspecified",
+  8: "Other operating conditions",
+  9: "Public procurement",
+  10: "Authorisation, registration and licensing",
+  11: "Taxation",
+  12: "Foreign direct investment",
+  13: "Labour law",
+  14: "Intellectual property",
+  15: "Consumer protection",
+  16: "Design and testing standards",
+  17: "Regulatory Compliance and Transparency",
+};
+
+export const IMPLEMENTATION_LEVEL: Record<number, string> = {
+  1: "national",
+  2: "supranational",
+  3: "subnational",
+  4: "bi- or plurilateral agreement",
+  5: "multilateral agreement",
+  6: "other",
+};
+
+// Key jurisdictions (subset for common filters)
+export const JURISDICTIONS: Record<number, string> = {
+  840: "United States",
+  156: "China",
+  276: "Germany",
+  251: "France",
+  826: "United Kingdom",
+  381: "Italy",
+  724: "Spain",
+  392: "Japan",
+  410: "South Korea",
+  356: "India",
+  864: "Brazil",
+  124: "Canada",
+  36: "Australia",
+  752: "Sweden",
+  578: "Norway",
+  246: "Finland",
+  208: "Denmark",
+  528: "Netherlands",
+  756: "Switzerland",
+  682: "Saudi Arabia",
+  634: "Qatar",
+  784: "United Arab Emirates",
+  414: "Kuwait",
+  516: "Namibia",
+  710: "South Africa",
+};

@@ -1,9 +1,9 @@
 "use client";
 
-import type { DpaIntervention } from "@/lib/dpa-types";
+import type { DpaEvent } from "@/lib/dpa-types";
 
 interface ResultsTableProps {
-  data: DpaIntervention[];
+  data: DpaEvent[];
   isLoading: boolean;
   error?: string;
 }
@@ -28,57 +28,36 @@ export default function ResultsTable({ data, isLoading, error }: ResultsTablePro
           <tr>
             <th style={styles.th}>ID</th>
             <th style={styles.th}>Title</th>
-            <th style={styles.th}>Type</th>
-            <th style={styles.th}>Evaluation</th>
-            <th style={styles.th}>Implemented</th>
-            <th style={styles.th}>In Force</th>
+            <th style={styles.th}>Date</th>
+            <th style={styles.th}>Status</th>
+            <th style={styles.th}>Event Type</th>
+            <th style={styles.th}>Policy Area</th>
+            <th style={styles.th}>Implementers</th>
           </tr>
         </thead>
         <tbody>
-          {data.map((item) => (
-            <tr key={item.intervention_id} style={styles.row}>
+          {data.map((event) => (
+            <tr key={event.id} style={styles.row}>
               <td style={styles.td}>
-                <a
-                  href={item.intervention_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.link}
-                >
-                  {item.intervention_id}
+                <a href={event.url} target="_blank" rel="noopener noreferrer" style={styles.link}>
+                  {event.id}
                 </a>
               </td>
               <td style={styles.td}>
                 <div style={styles.titleCell}>
-                  <span style={styles.title}>{item.state_act_title}</span>
-                  <span style={styles.jurisdictions}>
-                    {item.implementing_jurisdictions.map((j) => j.name).join(", ")}
-                  </span>
+                  <span style={styles.title}>{event.title}</span>
+                  <span style={styles.instrument}>{event.policy_instrument}</span>
                 </div>
               </td>
-              <td style={styles.td}>{item.intervention_type}</td>
+              <td style={styles.td}>{event.date}</td>
               <td style={styles.td}>
-                <span
-                  style={{
-                    ...styles.badge,
-                    background:
-                      item.gta_evaluation === "Red"
-                        ? "#fee2e2"
-                        : item.gta_evaluation === "Amber"
-                        ? "#fef3c7"
-                        : "#dcfce7",
-                    color:
-                      item.gta_evaluation === "Red"
-                        ? "#991b1b"
-                        : item.gta_evaluation === "Amber"
-                        ? "#92400e"
-                        : "#166534",
-                  }}
-                >
-                  {item.gta_evaluation}
-                </span>
+                <span style={{ ...styles.statusBadge, background: event.status === "adopted" ? "#dcfce7" : "#fef3c7", color: event.status === "adopted" ? "#166534" : "#92400e" }}>{event.status}</span>
               </td>
-              <td style={styles.td}>{item.date_implemented || "—"}</td>
-              <td style={styles.td}>{item.is_in_force ? "✓" : "✗"}</td>
+              <td style={styles.td}>{event.event_type}</td>
+              <td style={styles.td}>{event.policy_area}</td>
+              <td style={styles.td}>
+                {event.implementers.map((impl) => impl.name).join(", ")}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -121,15 +100,16 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: "0.25rem",
+    maxWidth: "300px",
   },
   title: {
     fontWeight: 500,
   },
-  jurisdictions: {
+  instrument: {
     fontSize: "0.75rem",
     color: "#666",
   },
-  badge: {
+  statusBadge: {
     display: "inline-block",
     padding: "0.25rem 0.5rem",
     borderRadius: "9999px",
