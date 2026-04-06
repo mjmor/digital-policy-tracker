@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { DpaApiRequest, DpaApiResponse } from "@/lib/dpa-types";
 
-const DPA_API_URL = "https://api.globaltradealert.org/api/v1/data/";
+const DPA_API_URL = "https://api.globaltradealert.org/api/v1/dpa/events/";
 
 export async function POST(request: NextRequest) {
   try {
