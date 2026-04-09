@@ -12,6 +12,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const DB_PATH = path.join(DATA_DIR, "events.db");
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 let _db: Database.Database | undefined;
 =======
 let _db: Database.Database | null = null;
@@ -46,6 +47,9 @@ function initializeSchema(db: Database.Database) {
   `);
 }
 >>>>>>> 51aa6dc (fix: eliminate circular init between db.ts and schema.ts)
+=======
+let _db: Database.Database | undefined;
+>>>>>>> c454768 (fix: replace db singleton with getDb() function calls)
 
 export function getDb(): Database.Database {
   if (!_db) {
@@ -53,6 +57,9 @@ export function getDb(): Database.Database {
     _db.pragma("journal_mode = WAL");
     _db.pragma("foreign_keys = ON");
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c454768 (fix: replace db singleton with getDb() function calls)
     _db.exec(`
       CREATE TABLE IF NOT EXISTS events (
         id           TEXT PRIMARY KEY,
@@ -79,16 +86,20 @@ export function getDb(): Database.Database {
       CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
       CREATE INDEX IF NOT EXISTS idx_events_synced_at ON events(synced_at);
     `);
+<<<<<<< HEAD
 =======
     if (!_initialized) {
       initializeSchema(_db);
       _initialized = true;
     }
 >>>>>>> 51aa6dc (fix: eliminate circular init between db.ts and schema.ts)
+=======
+>>>>>>> c454768 (fix: replace db singleton with getDb() function calls)
   }
   return _db;
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 // Convenience alias — use getDb() for new code
 export const db = {
@@ -110,3 +121,17 @@ export const db = new Proxy({} as Database.Database, {
   },
 });
 >>>>>>> 51aa6dc (fix: eliminate circular init between db.ts and schema.ts)
+=======
+// Convenience aliases matching the API used in events.ts
+export const db = {
+  prepare(sql: string) {
+    return getDb().prepare(sql);
+  },
+  exec(sql: string) {
+    return getDb().exec(sql);
+  },
+  transaction<T>(fn: (this: Database.Database) => T) {
+    return getDb().transaction(fn);
+  },
+};
+>>>>>>> c454768 (fix: replace db singleton with getDb() function calls)
