@@ -1,11 +1,11 @@
-import Database from "better-sqlite3";
-
 "use server";
 
 import { getDb } from "@/lib/db";
 import type { DpaApiRequest, DpaApiResponse } from "@/lib/dpa-types";
 import type { ReviewStatus, StoredEvent } from "@/lib/event-types";
 import { randomUUID } from "crypto";
+
+import Database from "better-sqlite3";
 
 // ---------------------------------------------------------------------------
 // Sync: pull from DPA and store as pending
