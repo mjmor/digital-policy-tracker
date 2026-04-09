@@ -5,14 +5,45 @@ import { redirect } from "next/navigation";
 import { useState } from "react";
 import FilterPanel from "@/components/FilterPanel";
 import ResultsTable from "@/components/ResultsTable";
+import ReviewQueue from "@/components/ReviewQueue";
 import type { DpaApiRequest, DpaApiResponse } from "@/lib/dpa-types";
+import type { StoredEvent } from "@/lib/event-types";
 import { queryDpaApi } from "@/lib/dpa-client";
+
+type Tab = "search" | "review";
+
+interface Stats {
+  pending: number;
+  reviewed: number;
+  archived: number;
+  lastSynced: string | null;
+}
+
+interface QueueData {
+  events: StoredEvent[];
+}
+
+interface StatsData {
+  pending: number;
+  reviewed: number;
+  archived: number;
+  lastSynced: string | null;
+}
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
+  const [activeTab, setActiveTab] = useState<Tab>("review");
   const [results, setResults] = useState<DpaApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [initialQueue, setInitialQueue] = useState<StoredEvent[]>([]);
+  const [initialStats, setInitialStats] = useState<Stats>({
+    pending: 0,
+    reviewed: 0,
+    archived: 0,
+    lastSynced: null,
+  });
+  const [queueLoaded, setQueueLoaded] = useState(false);
 
   if (!isLoaded) {
     return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
@@ -20,6 +51,19 @@ export default function Dashboard() {
 
   if (!user) {
     redirect("/sign-in");
+  }
+
+  // Load review queue data on first switch to review tab
+  if (activeTab === "review" && !queueLoaded) {
+    setQueueLoaded(true);
+    fetch("/api/events/queue")
+      .then((r) => r.json())
+      .then((data: QueueData) => setInitialQueue(data.events ?? []))
+      .catch(() => {});
+    fetch("/api/events/stats")
+      .then((r) => r.json())
+      .then((data: StatsData) => setInitialStats(data))
+      .catch(() => {});
   }
 
   const handleSearch = async (params: DpaApiRequest) => {
@@ -46,9 +90,11 @@ export default function Dashboard() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: "2rem",
+          flexWrap: "wrap",
+          gap: "1rem",
         }}
       >
-        <h1>Digital Policy Tracker</h1>
+        <h1 style={{ margin: 0 }}>Digital Policy Tracker</h1>
         <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
           <span style={{ fontSize: "0.875rem", color: "#666" }}>
             {user.emailAddresses[0]?.emailAddress}
@@ -59,16 +105,36 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <section style={styles.content}>
-        <FilterPanel onSearch={handleSearch} isLoading={isLoading} />
-      </section>
+      {/* Tab navigation */}
+      <div style={styles.tabs}>
+        <button
+          onClick={() => setActiveTab("review")}
+          style={{ ...styles.tab, ...(activeTab === "review" ? styles.tabActive : {}) }}
+        >
+          Review Queue
+        </button>
+        <button
+          onClick={() => setActiveTab("search")}
+          style={{ ...styles.tab, ...(activeTab === "search" ? styles.tabActive : {}) }}
+        >
+          Search DPA
+        </button>
+      </div>
 
-      {results && (
-        <section style={styles.results}>
-          <h2 style={styles.resultsTitle}>
-            Results {results.length > 0 && `(${results.length})`}
-          </h2>
-          <ResultsTable data={results} isLoading={isLoading} error={error} />
+      {/* Tab content */}
+      {activeTab === "review" ? (
+        <ReviewQueue initialEvents={initialQueue} stats={initialStats} />
+      ) : (
+        <section style={styles.section}>
+          <FilterPanel onSearch={handleSearch} isLoading={isLoading} />
+          {results && (
+            <div style={styles.results}>
+              <h2 style={styles.resultsTitle}>
+                Results {results.length > 0 && `(${results.length})`}
+              </h2>
+              <ResultsTable data={results} isLoading={isLoading} error={error} />
+            </div>
+          )}
         </section>
       )}
     </main>
@@ -76,8 +142,29 @@ export default function Dashboard() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  content: {
-    marginBottom: "2rem",
+  tabs: {
+    display: "flex",
+    gap: "0.25rem",
+    borderBottom: "1px solid #e5e5e5",
+    marginBottom: "1.5rem",
+  },
+  tab: {
+    padding: "0.5rem 1rem",
+    background: "transparent",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    fontSize: "0.875rem",
+    cursor: "pointer",
+    color: "#666",
+    marginBottom: "-1px",
+  },
+  tabActive: {
+    color: "#171717",
+    fontWeight: 600,
+    borderBottomColor: "#171717",
+  },
+  section: {
+    marginTop: "0",
   },
   results: {
     marginTop: "2rem",
