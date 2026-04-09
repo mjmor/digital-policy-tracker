@@ -1,6 +1,8 @@
+import Database from "better-sqlite3";
+
 "use server";
 
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import type { DpaApiRequest, DpaApiResponse } from "@/lib/dpa-types";
 import type { ReviewStatus, StoredEvent } from "@/lib/event-types";
 import { randomUUID } from "crypto";
@@ -31,6 +33,8 @@ export async function syncEvents(
     const events = rawData ?? [];
     const now = new Date().toISOString();
 
+    const db = getDb();
+
     const insert = db.prepare(`
       INSERT OR IGNORE INTO events (
         id, dpa_id, title, url, description, date, status,
@@ -48,7 +52,7 @@ export async function syncEvents(
     let added = 0;
     let duplicates = 0;
 
-    const insertMany = db.transaction((evts: DpaApiResponse) => {
+    const insertMany = db.transaction(function (this: Database.Database, evts: DpaApiResponse) {
       for (const evt of evts) {
         const result = insert.run({
           id: randomUUID(),
@@ -100,6 +104,7 @@ export async function getReviewQueue(
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString();
 
+  const db = getDb();
   const rows = db
     .prepare(
       `SELECT * FROM events
@@ -113,6 +118,7 @@ export async function getReviewQueue(
 }
 
 export async function getArchived(): Promise<{ events: StoredEvent[] }> {
+  const db = getDb();
   const rows = db
     .prepare(
       `SELECT * FROM events
@@ -130,6 +136,7 @@ export async function getStats(): Promise<{
   archived: number;
   lastSynced: string | null;
 }> {
+  const db = getDb();
   const pending = (
     db.prepare(`SELECT COUNT(*) as c FROM events WHERE review_status = 'pending'`).get() as { c: number }
   ).c;
@@ -153,6 +160,7 @@ export async function getStats(): Promise<{
 // ---------------------------------------------------------------------------
 
 export async function reviewEvent(id: string): Promise<{ success: boolean }> {
+  const db = getDb();
   const result = db
     .prepare(
       `UPDATE events SET review_status = 'reviewed', reviewed_at = ? WHERE id = ?`
@@ -162,6 +170,7 @@ export async function reviewEvent(id: string): Promise<{ success: boolean }> {
 }
 
 export async function archiveEvent(id: string): Promise<{ success: boolean }> {
+  const db = getDb();
   const result = db
     .prepare(
       `UPDATE events SET review_status = 'archived', archived_at = ? WHERE id = ?`
@@ -171,6 +180,7 @@ export async function archiveEvent(id: string): Promise<{ success: boolean }> {
 }
 
 export async function restoreEvent(id: string): Promise<{ success: boolean }> {
+  const db = getDb();
   const result = db
     .prepare(
       `UPDATE events SET review_status = 'pending', reviewed_at = NULL, archived_at = NULL WHERE id = ?`
@@ -180,6 +190,7 @@ export async function restoreEvent(id: string): Promise<{ success: boolean }> {
 }
 
 export async function deleteEvent(id: string): Promise<{ success: boolean }> {
+  const db = getDb();
   const result = db
     .prepare(`DELETE FROM events WHERE id = ?`)
     .run(id);
