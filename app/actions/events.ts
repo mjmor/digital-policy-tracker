@@ -15,18 +15,23 @@ export async function syncEvents(
   params: DpaApiRequest
 ): Promise<{ added: number; duplicates: number; error?: string }> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/dpa`, {
+    const apiKey = process.env.DPA_API_KEY;
+    if (!apiKey) {
+      return { added: 0, duplicates: 0, error: "DPA_API_KEY not configured" };
+    }
+
+    const res = await fetch("https://api.globaltradealert.org/api/v1/dpa/events/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `APIKey ${apiKey}`,
+      },
       body: JSON.stringify(params),
-      // Use a short cache-busting tag so we always get fresh data on sync
       cache: "no-store",
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Unknown error" }));
-      return { added: 0, duplicates: 0, error: err.error ?? `HTTP ${res.status}` };
+      return { added: 0, duplicates: 0, error: `DPA API error: ${res.status}` };
     }
 
     const rawData = (await res.json()) as DpaApiResponse;
