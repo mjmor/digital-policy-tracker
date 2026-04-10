@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { parseStoredEvent } from "@/lib/parse-event";
 import type { StoredEvent, ParsedStoredEvent } from "@/lib/event-types";
 import {
@@ -23,7 +23,7 @@ export default function ReviewQueue() {
     lastSynced: null as string | null,
   });
   const [filter, setFilter] = useState<"pending" | "reviewed" | "archived">("pending");
-  const [isPending, setIsPending] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
   const [actionTarget, setActionTarget] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -39,12 +39,10 @@ export default function ReviewQueue() {
   }, []);
 
   const loadQueue = useCallback(() => {
-    getReviewQueue(365)
-      .then(({ events }) => setEvents(events.map(parseStoredEvent)))
-      .catch(() => {});
-    getStats()
-      .then(setCounts)
-      .catch(() => {});
+    return Promise.all([
+      getReviewQueue(365).then(({ events }) => setEvents(events.map(parseStoredEvent))),
+      getStats().then(setCounts),
+    ]);
   }, []);
 
   const handleSync = useCallback(() => {
@@ -60,21 +58,21 @@ export default function ReviewQueue() {
         ],
       },
     };
-    setIsPending(true);
+    setIsLoading(true);
     syncEvents(params).then((result) => {
       if (result.error) {
         setActionError(result.error);
       } else {
         setSyncResult(`Sync complete: ${result.added} new, ${result.duplicates} duplicates.`);
       }
-      loadQueue().finally(() => setIsPending(false));
+      loadQueue().finally(() => setIsLoading(false));
     });
   }, [loadQueue]);
 
   const handleReview = useCallback((id: string) => {
     setActionTarget(id);
     setActionError(null);
-    setIsPending(true);
+    setIsLoading(true);
     reviewEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -87,14 +85,14 @@ export default function ReviewQueue() {
         setActionError("Failed to mark as reviewed.");
       }
       setActionTarget(null);
-      setIsPending(false);
+      setIsLoading(false);
     });
   }, []);
 
   const handleArchive = useCallback((id: string) => {
     setActionTarget(id);
     setActionError(null);
-    setIsPending(true);
+    setIsLoading(true);
     archiveEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -107,7 +105,7 @@ export default function ReviewQueue() {
         setActionError("Failed to archive.");
       }
       setActionTarget(null);
-      setIsPending(false);
+      setIsLoading(false);
     });
   }, []);
 
@@ -115,7 +113,7 @@ export default function ReviewQueue() {
     if (!confirm("Delete this event permanently?")) return;
     setActionTarget(id);
     setActionError(null);
-    setIsPending(true);
+    setIsLoading(true);
     deleteEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -123,14 +121,14 @@ export default function ReviewQueue() {
         setActionError("Failed to delete.");
       }
       setActionTarget(null);
-      setIsPending(false);
+      setIsLoading(false);
     });
   }, []);
 
   const handleRestore = useCallback((id: string) => {
     setActionTarget(id);
     setActionError(null);
-    setIsPending(true);
+    setIsLoading(true);
     restoreEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -143,7 +141,7 @@ export default function ReviewQueue() {
         setActionError("Failed to restore.");
       }
       setActionTarget(null);
-      setIsPending(false);
+      setIsLoading(false);
     });
   }, []);
 
@@ -181,10 +179,10 @@ export default function ReviewQueue() {
           {actionError && <span style={styles.actionError}>{actionError}</span>}
           <button
             onClick={handleSync}
-            disabled={isPending}
+            disabled={isLoading}
             style={styles.syncButton}
           >
-            {isPending ? "Syncing…" : "Sync from DPA"}
+            {isLoading ? "Syncing…" : "Sync from DPA"}
           </button>
         </div>
       </div>
