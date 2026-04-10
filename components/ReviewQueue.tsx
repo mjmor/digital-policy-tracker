@@ -60,22 +60,22 @@ export default function ReviewQueue() {
         ],
       },
     };
-    setIsPending(async () => {
-      const result = await syncEvents(params);
+    setIsPending(true);
+    syncEvents(params).then((result) => {
       if (result.error) {
         setActionError(result.error);
       } else {
         setSyncResult(`Sync complete: ${result.added} new, ${result.duplicates} duplicates.`);
-        loadQueue();
       }
+      loadQueue().finally(() => setIsPending(false));
     });
   }, [loadQueue]);
 
   const handleReview = useCallback((id: string) => {
     setActionTarget(id);
     setActionError(null);
-    setIsPending(async () => {
-      const result = await reviewEvent(id);
+    setIsPending(true);
+    reviewEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
         setCounts((prev) => ({
@@ -87,14 +87,15 @@ export default function ReviewQueue() {
         setActionError("Failed to mark as reviewed.");
       }
       setActionTarget(null);
+      setIsPending(false);
     });
   }, []);
 
   const handleArchive = useCallback((id: string) => {
     setActionTarget(id);
     setActionError(null);
-    setIsPending(async () => {
-      const result = await archiveEvent(id);
+    setIsPending(true);
+    archiveEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
         setCounts((prev) => ({
@@ -106,6 +107,7 @@ export default function ReviewQueue() {
         setActionError("Failed to archive.");
       }
       setActionTarget(null);
+      setIsPending(false);
     });
   }, []);
 
@@ -113,22 +115,23 @@ export default function ReviewQueue() {
     if (!confirm("Delete this event permanently?")) return;
     setActionTarget(id);
     setActionError(null);
-    setIsPending(async () => {
-      const result = await deleteEvent(id);
+    setIsPending(true);
+    deleteEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
       } else {
         setActionError("Failed to delete.");
       }
       setActionTarget(null);
+      setIsPending(false);
     });
   }, []);
 
   const handleRestore = useCallback((id: string) => {
     setActionTarget(id);
     setActionError(null);
-    setIsPending(async () => {
-      const result = await restoreEvent(id);
+    setIsPending(true);
+    restoreEvent(id).then((result) => {
       if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
         setCounts((prev) => ({
@@ -140,6 +143,7 @@ export default function ReviewQueue() {
         setActionError("Failed to restore.");
       }
       setActionTarget(null);
+      setIsPending(false);
     });
   }, []);
 
