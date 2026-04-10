@@ -1,125 +1,155 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useTransition, useEffect } from "react";
 import { parseStoredEvent } from "@/lib/parse-event";
 import type { StoredEvent, ParsedStoredEvent } from "@/lib/event-types";
+import {
+  syncEvents,
+  getReviewQueue,
+  getStats,
+  reviewEvent,
+  archiveEvent,
+  restoreEvent,
+  deleteEvent,
+} from "@/app/actions/events";
+import type { DpaApiRequest } from "@/lib/dpa-types";
 
-interface ReviewQueueProps {
-  initialEvents: StoredEvent[];
-  stats: {
-    pending: number;
-    reviewed: number;
-    archived: number;
-    lastSynced: string | null;
-  };
-}
-
-export default function ReviewQueue({ initialEvents, stats }: ReviewQueueProps) {
-  const [events, setEvents] = useState<ParsedStoredEvent[]>(
-    initialEvents.map(parseStoredEvent)
-  );
-  const [counts, setCounts] = useState(stats);
-  const [syncing, setSyncing] = useState(false);
-  const [syncingFilter, setSyncingFilter] = useState<"pending" | "reviewed" | "archived">("pending");
-  const [archiving, setArchiving] = useState<string | null>(null);
-  const [reviewing, setReviewing] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
+export default function ReviewQueue() {
+  const [events, setEvents] = useState<ParsedStoredEvent[]>([]);
+  const [counts, setCounts] = useState({
+    pending: 0,
+    reviewed: 0,
+    archived: 0,
+    lastSynced: null as string | null,
+  });
+  const [filter, setFilter] = useState<"pending" | "reviewed" | "archived">("pending");
+  const [isPending, setIsPending] = useTransition();
+  const [actionTarget, setActionTarget] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
-    setSyncResult(null);
-    setActionError(null);
-    try {
-      const res = await fetch("/api/dpa/sync", { cache: "no-store" });
-      const data = await res.json() as { added?: number; duplicates?: number; error?: string };
-      if (data.error) {
-        setActionError(data.error);
-      } else {
-        setSyncResult(`Sync complete: ${data.added ?? 0} new, ${data.duplicates ?? 0} duplicates.`);
-        // Refresh events
-        const queueRes = await fetch("/api/events/queue");
-        const queueData = await queueRes.json() as { events: StoredEvent[] };
-        setEvents(queueData.events.map(parseStoredEvent));
-        const statsRes = await fetch("/api/events/stats");
-        const statsData = await statsRes.json();
-        setCounts(statsData);
-      }
-    } catch {
-      setActionError("Sync failed — check your connection.");
-    } finally {
-      setSyncing(false);
-    }
+  // Load initial data on mount
+  useEffect(() => {
+    getReviewQueue(365)
+      .then(({ events }) => setEvents(events.map(parseStoredEvent)))
+      .catch(() => {});
+    getStats()
+      .then(setCounts)
+      .catch(() => {});
   }, []);
 
-  const handleReview = useCallback(async (id: string) => {
-    setReviewing(id);
+  const loadQueue = useCallback(() => {
+    getReviewQueue(365)
+      .then(({ events }) => setEvents(events.map(parseStoredEvent)))
+      .catch(() => {});
+    getStats()
+      .then(setCounts)
+      .catch(() => {});
+  }, []);
+
+  const handleSync = useCallback(() => {
+    setSyncResult(null);
     setActionError(null);
-    try {
-      const res = await fetch(`/api/events/${id}/review`, { method: "POST" });
-      if (res.ok) {
+    const params: DpaApiRequest = {
+      limit: 500,
+      sorting: "-date",
+      request_data: {
+        event_period: [
+          new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          new Date().toISOString().slice(0, 10),
+        ],
+      },
+    };
+    setIsPending(async () => {
+      const result = await syncEvents(params);
+      if (result.error) {
+        setActionError(result.error);
+      } else {
+        setSyncResult(`Sync complete: ${result.added} new, ${result.duplicates} duplicates.`);
+        loadQueue();
+      }
+    });
+  }, [loadQueue]);
+
+  const handleReview = useCallback((id: string) => {
+    setActionTarget(id);
+    setActionError(null);
+    setIsPending(async () => {
+      const result = await reviewEvent(id);
+      if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
-        setCounts((prev) => ({ ...prev, pending: prev.pending - 1, reviewed: prev.reviewed + 1 }));
+        setCounts((prev) => ({
+          ...prev,
+          pending: prev.pending - 1,
+          reviewed: prev.reviewed + 1,
+        }));
       } else {
         setActionError("Failed to mark as reviewed.");
       }
-    } finally {
-      setReviewing(null);
-    }
+      setActionTarget(null);
+    });
   }, []);
 
-  const handleArchive = useCallback(async (id: string) => {
-    setArchiving(id);
+  const handleArchive = useCallback((id: string) => {
+    setActionTarget(id);
     setActionError(null);
-    try {
-      const res = await fetch(`/api/events/${id}/archive`, { method: "POST" });
-      if (res.ok) {
+    setIsPending(async () => {
+      const result = await archiveEvent(id);
+      if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
-        setCounts((prev) => ({ ...prev, pending: prev.pending - 1, archived: prev.archived + 1 }));
+        setCounts((prev) => ({
+          ...prev,
+          pending: prev.pending - 1,
+          archived: prev.archived + 1,
+        }));
       } else {
         setActionError("Failed to archive.");
       }
-    } finally {
-      setArchiving(null);
-    }
+      setActionTarget(null);
+    });
   }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = useCallback((id: string) => {
     if (!confirm("Delete this event permanently?")) return;
-    setDeleting(id);
+    setActionTarget(id);
     setActionError(null);
-    try {
-      const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
-      if (res.ok) {
+    setIsPending(async () => {
+      const result = await deleteEvent(id);
+      if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
       } else {
         setActionError("Failed to delete.");
       }
-    } finally {
-      setDeleting(null);
-    }
+      setActionTarget(null);
+    });
   }, []);
 
-  const handleRestore = useCallback(async (id: string) => {
+  const handleRestore = useCallback((id: string) => {
+    setActionTarget(id);
     setActionError(null);
-    try {
-      const res = await fetch(`/api/events/${id}/restore`, { method: "POST" });
-      if (res.ok) {
+    setIsPending(async () => {
+      const result = await restoreEvent(id);
+      if (result.success) {
         setEvents((prev) => prev.filter((e) => e.id !== id));
-        setCounts((prev) => ({ ...prev, archived: prev.archived - 1, pending: prev.pending + 1 }));
+        setCounts((prev) => ({
+          ...prev,
+          archived: prev.archived - 1,
+          pending: prev.pending + 1,
+        }));
       } else {
         setActionError("Failed to restore.");
       }
-    } finally {
-      setArchiving(null);
-    }
+      setActionTarget(null);
+    });
   }, []);
 
-  const filterTabs: { key: "pending" | "reviewed" | "archived"; label: string }[] = [
-    { key: "pending", label: `Pending (${counts.pending})` },
-    { key: "reviewed", label: `Reviewed (${counts.reviewed})` },
-    { key: "archived", label: `Archived (${counts.archived})` },
+  // Filtered events based on current tab
+  const filteredEvents = events.filter((e) => e.review_status === filter);
+
+  const filterTabs = [
+    { key: "pending" as const, label: `Pending (${counts.pending})` },
+    { key: "reviewed" as const, label: `Reviewed (${counts.reviewed})` },
+    { key: "archived" as const, label: `Archived (${counts.archived})` },
   ];
 
   return (
@@ -145,8 +175,12 @@ export default function ReviewQueue({ initialEvents, stats }: ReviewQueueProps) 
         <div style={styles.syncActions}>
           {syncResult && <span style={styles.syncResult}>{syncResult}</span>}
           {actionError && <span style={styles.actionError}>{actionError}</span>}
-          <button onClick={handleSync} disabled={syncing} style={styles.syncButton}>
-            {syncing ? "Syncing…" : "Sync from DPA"}
+          <button
+            onClick={handleSync}
+            disabled={isPending}
+            style={styles.syncButton}
+          >
+            {isPending ? "Syncing…" : "Sync from DPA"}
           </button>
         </div>
       </div>
@@ -156,10 +190,10 @@ export default function ReviewQueue({ initialEvents, stats }: ReviewQueueProps) 
         {filterTabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setSyncingFilter(tab.key)}
+            onClick={() => setFilter(tab.key)}
             style={{
               ...styles.tab,
-              ...(syncingFilter === tab.key ? styles.tabActive : {}),
+              ...(filter === tab.key ? styles.tabActive : {}),
             }}
           >
             {tab.label}
@@ -168,17 +202,17 @@ export default function ReviewQueue({ initialEvents, stats }: ReviewQueueProps) 
       </div>
 
       {/* Events list */}
-      {events.length === 0 ? (
+      {filteredEvents.length === 0 ? (
         <div style={styles.empty}>
-          {syncingFilter === "pending"
+          {filter === "pending"
             ? "No pending events. Run a sync to pull new DPA events."
-            : syncingFilter === "reviewed"
+            : filter === "reviewed"
             ? "No reviewed events yet."
             : "No archived events."}
         </div>
       ) : (
         <div style={styles.list}>
-          {events.map((event) => (
+          {filteredEvents.map((event) => (
             <div key={event.id} style={styles.card}>
               <div style={styles.cardHeader}>
                 <div style={styles.cardMeta}>
@@ -202,38 +236,39 @@ export default function ReviewQueue({ initialEvents, stats }: ReviewQueueProps) 
                   </span>
                 </div>
                 <div style={styles.cardActions}>
-                  {syncingFilter === "pending" && (
+                  {filter === "pending" && (
                     <>
                       <button
                         onClick={() => handleReview(event.id)}
-                        disabled={!!reviewing}
+                        disabled={actionTarget !== null}
                         style={styles.btnReview}
                       >
-                        {reviewing === event.id ? "…" : "✓ Review"}
+                        {actionTarget === event.id ? "…" : "✓ Review"}
                       </button>
                       <button
                         onClick={() => handleArchive(event.id)}
-                        disabled={!!archiving}
+                        disabled={actionTarget !== null}
                         style={styles.btnArchive}
                       >
-                        {archiving === event.id ? "…" : "Archive"}
+                        {actionTarget === event.id ? "…" : "Archive"}
                       </button>
                     </>
                   )}
-                  {syncingFilter === "archived" && (
+                  {filter === "archived" && (
                     <button
                       onClick={() => handleRestore(event.id)}
+                      disabled={actionTarget !== null}
                       style={styles.btnRestore}
                     >
-                      Restore
+                      {actionTarget === event.id ? "…" : "Restore"}
                     </button>
                   )}
                   <button
                     onClick={() => handleDelete(event.id)}
-                    disabled={!!deleting}
+                    disabled={actionTarget !== null}
                     style={styles.btnDelete}
                   >
-                    {deleting === event.id ? "…" : "Delete"}
+                    {actionTarget === event.id ? "…" : "Delete"}
                   </button>
                 </div>
               </div>

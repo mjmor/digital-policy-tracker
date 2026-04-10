@@ -5,9 +5,8 @@ import FilterPanel from "@/components/FilterPanel";
 import ResultsTable from "@/components/ResultsTable";
 import ReviewQueue from "@/components/ReviewQueue";
 import type { DpaApiRequest, DpaApiResponse } from "@/lib/dpa-types";
-import type { StoredEvent } from "@/lib/event-types";
-import type { User } from "@clerk/nextjs/server";
 import { queryDpaApi } from "@/lib/dpa-client";
+import type { User } from "@clerk/nextjs/server";
 
 type Tab = "search" | "review";
 
@@ -15,50 +14,11 @@ interface DashboardClientProps {
   user: User | null;
 }
 
-interface Stats {
-  pending: number;
-  reviewed: number;
-  archived: number;
-  lastSynced: string | null;
-}
-
-interface QueueData {
-  events: StoredEvent[];
-}
-
-interface StatsData {
-  pending: number;
-  reviewed: number;
-  archived: number;
-  lastSynced: string | null;
-}
-
 export default function DashboardClient({ user }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState<Tab>("review");
   const [results, setResults] = useState<DpaApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const [initialQueue, setInitialQueue] = useState<StoredEvent[]>([]);
-  const [initialStats, setInitialStats] = useState<Stats>({
-    pending: 0,
-    reviewed: 0,
-    archived: 0,
-    lastSynced: null,
-  });
-  const [queueLoaded, setQueueLoaded] = useState(false);
-
-  // Load review queue data on first switch to review tab
-  if (activeTab === "review" && !queueLoaded) {
-    setQueueLoaded(true);
-    fetch("/api/events/queue")
-      .then((r) => r.json())
-      .then((data: QueueData) => setInitialQueue(data.events ?? []))
-      .catch(() => {});
-    fetch("/api/events/stats")
-      .then((r) => r.json())
-      .then((data: StatsData) => setInitialStats(data))
-      .catch(() => {});
-  }
 
   const handleSearch = async (params: DpaApiRequest) => {
     setIsLoading(true);
@@ -117,7 +77,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
 
       {/* Tab content */}
       {activeTab === "review" ? (
-        <ReviewQueue initialEvents={initialQueue} stats={initialStats} />
+        <ReviewQueue />
       ) : (
         <section style={styles.section}>
           <FilterPanel onSearch={handleSearch} isLoading={isLoading} />
