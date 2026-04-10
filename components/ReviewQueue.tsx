@@ -51,11 +51,11 @@ export default function ReviewQueue() {
     setSyncResult(null);
     setActionError(null);
     const params: DpaApiRequest = {
-      limit: 500,
+      limit: 10,
       sorting: "-date",
       request_data: {
         event_period: [
-          new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
           new Date().toISOString().slice(0, 10),
         ],
       },
