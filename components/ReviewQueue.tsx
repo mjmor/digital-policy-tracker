@@ -75,7 +75,9 @@ export default function ReviewQueue() {
     setIsLoading(true);
     reviewEvent(id).then((result) => {
       if (result.success) {
-        setEvents((prev) => prev.filter((e) => e.id !== id));
+        setEvents((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, review_status: "reviewed" as const } : e))
+        );
         setCounts((prev) => ({
           ...prev,
           pending: prev.pending - 1,
@@ -95,7 +97,9 @@ export default function ReviewQueue() {
     setIsLoading(true);
     archiveEvent(id).then((result) => {
       if (result.success) {
-        setEvents((prev) => prev.filter((e) => e.id !== id));
+        setEvents((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, review_status: "archived" as const } : e))
+        );
         setCounts((prev) => ({
           ...prev,
           pending: prev.pending - 1,
@@ -131,7 +135,9 @@ export default function ReviewQueue() {
     setIsLoading(true);
     restoreEvent(id).then((result) => {
       if (result.success) {
-        setEvents((prev) => prev.filter((e) => e.id !== id));
+        setEvents((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, review_status: "pending" as const } : e))
+        );
         setCounts((prev) => ({
           ...prev,
           archived: prev.archived - 1,
