@@ -113,13 +113,12 @@ export async function getReviewQueue(
   const rows = db
     .prepare(
       `SELECT * FROM events
-       WHERE review_status = 'pending'
-         AND date >= ?
+       WHERE date >= ?
        ORDER BY date DESC`
     )
     .all(cutoffStr.slice(0, 10)) as StoredEvent[];
 
-  return { events: rows.map(rowToEvent) };
+  return { events: rows };
 }
 
 export async function getArchived(): Promise<{ events: StoredEvent[] }> {
@@ -132,7 +131,7 @@ export async function getArchived(): Promise<{ events: StoredEvent[] }> {
     )
     .all() as StoredEvent[];
 
-  return { events: rows.map(rowToEvent) };
+  return { events: rows };
 }
 
 export async function getStats(): Promise<{
@@ -190,7 +189,7 @@ export async function restoreEvent(id: string): Promise<{ success: boolean }> {
     .prepare(
       `UPDATE events SET review_status = 'pending', reviewed_at = NULL, archived_at = NULL WHERE id = ?`
     )
-    .run(new Date().toISOString(), id);
+    .run(id);
   return { success: result.changes > 0 };
 }
 

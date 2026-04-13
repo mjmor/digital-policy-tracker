@@ -148,6 +148,20 @@ describe("getDb()", () => {
       expect(row.review_status).toBe("pending");
     });
 
+    it("restore by UUID id updates correct event", () => {
+      // Regression: restoreEvent was calling .run(timestamp, id) with two args
+      // but SQL has one ?, so timestamp was bound to ? and id was ignored — nothing matched.
+      insertTestEvent(db, "archived", "restore-uuid");
+      db.prepare(
+        "UPDATE events SET review_status = 'pending', reviewed_at = NULL, archived_at = NULL WHERE id = ?"
+      ).run("restore-uuid");
+
+      const row = db
+        .prepare("SELECT review_status FROM events WHERE id = ?")
+        .get("restore-uuid") as { review_status: string };
+      expect(row.review_status).toBe("pending");
+    });
+
     it("can be deleted permanently", () => {
       insertTestEvent(db);
       db.prepare("DELETE FROM events WHERE dpa_id = ?").run(TEST_EVENT.id);
@@ -199,6 +213,20 @@ describe("getDb()", () => {
         )
         .all("2024-01-15") as { dpa_id: number }[];
       expect(rows.map((r) => r.dpa_id)).toEqual([1004]);
+    });
+
+    it("all-status date query returns events of every review_status", () => {
+      // Regression: getReviewQueue had WHERE review_status = 'pending' so reviewed
+      // and archived events were never loaded, making those tabs always empty.
+      const rows = db
+        .prepare(
+          "SELECT dpa_id, review_status FROM events WHERE date >= ? ORDER BY date DESC"
+        )
+        .all("2023-01-01") as { dpa_id: number; review_status: string }[];
+      const statuses = rows.map((r) => r.review_status);
+      expect(statuses).toContain("pending");
+      expect(statuses).toContain("reviewed");
+      expect(statuses).toContain("archived");
     });
 
     it("returns last synced timestamp", () => {
