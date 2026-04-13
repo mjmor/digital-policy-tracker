@@ -120,7 +120,16 @@ export default function ReviewQueue() {
     setIsLoading(true);
     deleteEvent(id).then((result) => {
       if (result.success) {
-        setEvents((prev) => prev.filter((e) => e.id !== id));
+        setEvents((prev) => {
+          const target = prev.find((e) => e.id === id);
+          if (target) {
+            setCounts((c) => ({
+              ...c,
+              [target.review_status]: c[target.review_status] - 1,
+            }));
+          }
+          return prev.filter((e) => e.id !== id);
+        });
       } else {
         setActionError("Failed to delete.");
       }
