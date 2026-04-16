@@ -19,15 +19,22 @@ const TEST_EVENT = {
   implementation_level: "national",
 };
 
+const TEST_PLAN_ID = "test-plan-id";
+
 describe("getDb()", () => {
   let db: ReturnType<typeof getDb>;
 
   beforeEach(() => {
     db = getDb();
+    db.prepare(`
+      INSERT INTO search_plans (id, title, dpa_filters, created_at)
+      VALUES (?, ?, ?, ?)
+    `).run(TEST_PLAN_ID, "Test Plan", "{}", new Date().toISOString());
   });
 
   afterEach(() => {
     db.prepare("DELETE FROM events").run();
+    db.prepare("DELETE FROM search_plans").run();
   });
 
   // -------------------------------------------------------------------------
@@ -38,12 +45,12 @@ describe("getDb()", () => {
       const now = new Date().toISOString();
       db.prepare(`
         INSERT OR IGNORE INTO events (
-          id, dpa_id, title, url, description, date, status,
+          id, dpa_id, search_plan_id, title, url, description, date, status,
           event_type, action_type, implementers, policy_area,
           policy_instrument, economic_activities, implementation_level,
           synced_at, review_status
         ) VALUES (
-          @id, @dpa_id, @title, @url, @description, @date, @status,
+          @id, @dpa_id, @search_plan_id, @title, @url, @description, @date, @status,
           @event_type, @action_type, @implementers, @policy_area,
           @policy_instrument, @economic_activities, @implementation_level,
           @synced_at, 'pending'
@@ -51,6 +58,7 @@ describe("getDb()", () => {
       `).run({
         id: randomUUID(),
         dpa_id: TEST_EVENT.id,
+        search_plan_id: TEST_PLAN_ID,
         title: TEST_EVENT.title,
         url: TEST_EVENT.url,
         description: TEST_EVENT.description,
@@ -75,24 +83,24 @@ describe("getDb()", () => {
       expect(row.review_status).toBe("pending");
     });
 
-    it("INSERT OR IGNORE prevents duplicate dpa_id", () => {
+    it("INSERT OR IGNORE prevents duplicate (dpa_id, search_plan_id)", () => {
       const now = new Date().toISOString();
       const insert = db.prepare(`
         INSERT OR IGNORE INTO events (
-          id, dpa_id, title, url, description, date, status,
+          id, dpa_id, search_plan_id, title, url, description, date, status,
           event_type, action_type, implementers, policy_area,
           policy_instrument, economic_activities, implementation_level,
           synced_at, review_status
         ) VALUES (
-          @id, @dpa_id, @title, @url, @description, @date, @status,
+          @id, @dpa_id, @search_plan_id, @title, @url, @description, @date, @status,
           @event_type, @action_type, @implementers, @policy_area,
           @policy_instrument, @economic_activities, @implementation_level,
           @synced_at, 'pending'
         )
       `);
 
-      const r1 = insert.run({ ...eventRow(now), id: randomUUID() });
-      const r2 = insert.run({ ...eventRow(now), id: randomUUID() });
+      const r1 = insert.run({ ...eventRow(now, "pending", TEST_PLAN_ID), id: randomUUID() });
+      const r2 = insert.run({ ...eventRow(now, "pending", TEST_PLAN_ID), id: randomUUID() });
 
       expect(r1.changes).toBe(1);
       expect(r2.changes).toBe(0);
@@ -241,9 +249,10 @@ describe("getDb()", () => {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function eventRow(now: string, reviewStatus = "pending") {
+function eventRow(now: string, reviewStatus = "pending", searchPlanId = "test-plan-id") {
   return {
     dpa_id: TEST_EVENT.id,
+    search_plan_id: searchPlanId,
     title: TEST_EVENT.title,
     url: TEST_EVENT.url,
     description: TEST_EVENT.description,
@@ -266,17 +275,18 @@ function insertTestEvent(
   reviewStatus = "pending",
   id = "test-id",
   dpaId = TEST_EVENT.id,
-  date = TEST_EVENT.date
+  date = TEST_EVENT.date,
+  searchPlanId = "test-plan-id"
 ) {
   const now = new Date().toISOString();
   db.prepare(`
     INSERT OR IGNORE INTO events (
-      id, dpa_id, title, url, description, date, status,
+      id, dpa_id, search_plan_id, title, url, description, date, status,
       event_type, action_type, implementers, policy_area,
       policy_instrument, economic_activities, implementation_level,
       synced_at, review_status
     ) VALUES (
-      @id, @dpa_id, @title, @url, @description, @date, @status,
+      @id, @dpa_id, @search_plan_id, @title, @url, @description, @date, @status,
       @event_type, @action_type, @implementers, @policy_area,
       @policy_instrument, @economic_activities, @implementation_level,
       @synced_at, @review_status
@@ -284,6 +294,7 @@ function insertTestEvent(
   `).run({
     id,
     dpa_id: dpaId,
+    search_plan_id: searchPlanId,
     title: TEST_EVENT.title,
     url: TEST_EVENT.url,
     description: TEST_EVENT.description,
