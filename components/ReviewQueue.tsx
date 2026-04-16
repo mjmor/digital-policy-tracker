@@ -12,9 +12,12 @@ import {
   restoreEvent,
   deleteEvent,
 } from "@/app/actions/events";
-import type { DpaApiRequest } from "@/lib/dpa-types";
 
-export default function ReviewQueue() {
+interface ReviewQueueProps {
+  searchPlanId?: string;
+}
+
+export default function ReviewQueue({ searchPlanId }: ReviewQueueProps) {
   const [events, setEvents] = useState<ParsedStoredEvent[]>([]);
   const [counts, setCounts] = useState({
     pending: 0,
@@ -28,38 +31,31 @@ export default function ReviewQueue() {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Load initial data on mount
+  // Load initial data on mount and when searchPlanId changes
   useEffect(() => {
-    getReviewQueue(365)
+    if (!searchPlanId) return;
+    getReviewQueue(searchPlanId, 365)
       .then(({ events }) => setEvents(events.map(parseStoredEvent)))
       .catch(() => {});
-    getStats()
+    getStats(searchPlanId)
       .then(setCounts)
       .catch(() => {});
-  }, []);
+  }, [searchPlanId]);
 
   const loadQueue = useCallback(() => {
+    if (!searchPlanId) return Promise.resolve();
     return Promise.all([
-      getReviewQueue(365).then(({ events }) => setEvents(events.map(parseStoredEvent))),
-      getStats().then(setCounts),
+      getReviewQueue(searchPlanId, 365).then(({ events }) => setEvents(events.map(parseStoredEvent))),
+      getStats(searchPlanId).then(setCounts),
     ]);
-  }, []);
+  }, [searchPlanId]);
 
   const handleSync = useCallback(() => {
+    if (!searchPlanId) return;
     setSyncResult(null);
     setActionError(null);
-    const params: DpaApiRequest = {
-      limit: 10,
-      sorting: "-date",
-      request_data: {
-        event_period: [
-          new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-          new Date().toISOString().slice(0, 10),
-        ],
-      },
-    };
     setIsLoading(true);
-    syncEvents(params).then((result) => {
+    syncEvents(searchPlanId).then((result) => {
       if (result.error) {
         setActionError(result.error);
       } else {
@@ -67,7 +63,7 @@ export default function ReviewQueue() {
       }
       loadQueue().finally(() => setIsLoading(false));
     });
-  }, [loadQueue]);
+  }, [searchPlanId, loadQueue]);
 
   const handleReview = useCallback((id: string) => {
     setActionTarget(id);
