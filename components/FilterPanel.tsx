@@ -7,9 +7,10 @@ import { JURISDICTIONS, ECONOMIC_ACTIVITY, EVENT_TYPE, POLICY_AREA, IMPLEMENTATI
 interface FilterPanelProps {
   onSearch: (params: DpaApiRequest) => void;
   isLoading: boolean;
+  submitLabel?: string;
 }
 
-export default function FilterPanel({ onSearch, isLoading }: FilterPanelProps) {
+export default function FilterPanel({ onSearch, isLoading, submitLabel }: FilterPanelProps) {
   const [limit, setLimit] = useState(100);
   const [sorting, setSorting] = useState("-date");
   const [implementers, setImplementers] = useState<number[]>([]);
@@ -174,7 +175,7 @@ export default function FilterPanel({ onSearch, isLoading }: FilterPanelProps) {
       </div>
 
       <button type="submit" disabled={isLoading} style={styles.button}>
-        {isLoading ? "Searching..." : "Search"}
+        {isLoading ? "Searching..." : (submitLabel ?? "Search")}
       </button>
     </form>
   );
