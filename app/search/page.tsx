@@ -2,9 +2,9 @@
 
 import { useUser } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
-import ReviewQueue from "@/components/ReviewQueue";
+import SearchClient from "./SearchClient";
 
-export default function Dashboard() {
+export default function SearchPage() {
   const { user, isLoaded } = useUser();
 
   if (!isLoaded) {
@@ -15,9 +15,5 @@ export default function Dashboard() {
     redirect("/sign-in");
   }
 
-  return (
-    <main style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
-      <ReviewQueue />
-    </main>
-  );
+  return <SearchClient />;
 }

@@ -1,5 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import TopNav from "@/components/TopNav";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,10 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body>{children}</body>
+        <body>
+          <TopNav />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );
