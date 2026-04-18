@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
-import ReviewQueue from "@/components/ReviewQueue";
+import DashboardClient from "./DashboardClient";
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
@@ -15,9 +15,5 @@ export default function Dashboard() {
     redirect("/sign-in");
   }
 
-  return (
-    <main style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
-      <ReviewQueue />
-    </main>
-  );
+  return <DashboardClient />;
 }
