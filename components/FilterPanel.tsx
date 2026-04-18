@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { DpaApiRequest } from "@/lib/dpa-types";
 import { JURISDICTIONS, ECONOMIC_ACTIVITY, EVENT_TYPE, POLICY_AREA, IMPLEMENTATION_LEVEL } from "@/lib/dpa-types";
 
 interface FilterPanelProps {
-  onSearch: (params: DpaApiRequest) => void;
-  isLoading: boolean;
-  submitLabel?: string;
+  onSearch?: (params: DpaApiRequest) => void;
+  isLoading?: boolean;
+  /** Called on every filter change — useful when embedding without a submit button */
+  onChange?: (params: DpaApiRequest) => void;
+  /** Hide the built-in submit button (e.g. when embedded in a larger form) */
+  hideSubmit?: boolean;
 }
 
-export default function FilterPanel({ onSearch, isLoading, submitLabel }: FilterPanelProps) {
+export default function FilterPanel({ onSearch, isLoading, onChange, hideSubmit }: FilterPanelProps) {
   const [limit, setLimit] = useState(100);
   const [sorting, setSorting] = useState("-date");
   const [implementers, setImplementers] = useState<number[]>([]);
@@ -41,12 +44,24 @@ export default function FilterPanel({ onSearch, isLoading, submitLabel }: Filter
       requestData.event_period = [eventPeriodFrom, eventPeriodTo || null];
     }
 
-    onSearch({
+    onSearch?.({
       limit,
       sorting,
       request_data: requestData,
     });
   };
+
+  // Notify parent on every filter change (used when hideSubmit is true)
+  useEffect(() => {
+    if (!onChange) return;
+    const requestData: DpaApiRequest["request_data"] = {};
+    if (implementers.length > 0) requestData.implementing_jurisdiction = implementers;
+    if (economicActivity.length > 0) requestData.economic_activity = economicActivity;
+    if (eventType.length > 0) requestData.event_type = eventType;
+    if (policyArea.length > 0) requestData.policy_area = policyArea;
+    if (eventPeriodFrom || eventPeriodTo) requestData.event_period = [eventPeriodFrom, eventPeriodTo || null];
+    onChange({ limit, sorting, request_data: requestData });
+  }, [onChange, limit, sorting, implementers, economicActivity, eventType, policyArea, eventPeriodFrom, eventPeriodTo]);
 
   const toggleArrayValue = (
     arr: number[],
@@ -174,9 +189,11 @@ export default function FilterPanel({ onSearch, isLoading, submitLabel }: Filter
         </div>
       </div>
 
-      <button type="submit" disabled={isLoading} style={styles.button}>
-        {isLoading ? "Searching..." : (submitLabel ?? "Search")}
-      </button>
+      {!hideSubmit && (
+        <button type="submit" disabled={isLoading} style={styles.button}>
+          {isLoading ? "Searching..." : "Search"}
+        </button>
+      )}
     </form>
   );
 }

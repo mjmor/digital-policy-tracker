@@ -178,9 +178,8 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
             <div style={styles.formField}>
               <label style={styles.fieldLabel}>DPA Filters</label>
               <FilterPanel
-                onSearch={(params) => setCreateFilters(params)}
-                isLoading={false}
-                submitLabel="Set Filters"
+                onChange={setCreateFilters}
+                hideSubmit={true}
               />
             </div>
             {createError && <p style={styles.createError}>{createError}</p>}
