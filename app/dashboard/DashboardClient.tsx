@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import FilterPanel from "@/components/FilterPanel";
 import ReviewQueue from "@/components/ReviewQueue";
+import PlanDrawer from "@/components/PlanDrawer";
 import {
   listSearchPlans,
   createSearchPlan,
@@ -25,6 +26,7 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
   const [createFilters, setCreateFilters] = useState<DpaApiRequest>({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
 
   const loadPlans = useCallback(async () => {
     const { plans: fetched } = await listSearchPlans();
@@ -206,7 +208,18 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
       {!showCreateForm && (
         <>
           {selectedPlanId ? (
-            <ReviewQueue searchPlanId={selectedPlanId} />
+            <div style={styles.contentRow}>
+              <div style={styles.queueArea}>
+                <ReviewQueue searchPlanId={selectedPlanId} />
+              </div>
+              {selectedPlan && (
+                <PlanDrawer
+                  plan={selectedPlan}
+                  isOpen={drawerOpen}
+                  onToggle={() => setDrawerOpen((prev) => !prev)}
+                />
+              )}
+            </div>
           ) : (
             <div style={styles.emptyState}>
               <p style={styles.emptyMsg}>No search plans yet.</p>
@@ -328,6 +341,15 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "6px",
     fontSize: "0.875rem",
     cursor: "pointer",
+  },
+  contentRow: {
+    display: "flex",
+    gap: "1rem",
+    alignItems: "flex-start",
+  },
+  queueArea: {
+    flex: 1,
+    minWidth: 0,
   },
   emptyState: {
     padding: "4rem 2rem",
