@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import FilterPanel from "@/components/FilterPanel";
 import ReviewQueue from "@/components/ReviewQueue";
+import PlanDrawer from "@/components/PlanDrawer";
 import {
   listSearchPlans,
   createSearchPlan,
@@ -25,6 +26,7 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
   const [createFilters, setCreateFilters] = useState<DpaApiRequest>({});
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
 
   const loadPlans = useCallback(async () => {
     const { plans: fetched } = await listSearchPlans();
@@ -206,7 +208,16 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
       {!showCreateForm && (
         <>
           {selectedPlanId ? (
-            <ReviewQueue searchPlanId={selectedPlanId} />
+            <>
+              {selectedPlan && (
+                <PlanDrawer
+                  plan={selectedPlan}
+                  isOpen={drawerOpen}
+                  onToggle={() => setDrawerOpen((prev) => !prev)}
+                />
+              )}
+              <ReviewQueue searchPlanId={selectedPlanId} />
+            </>
           ) : (
             <div style={styles.emptyState}>
               <p style={styles.emptyMsg}>No search plans yet.</p>
