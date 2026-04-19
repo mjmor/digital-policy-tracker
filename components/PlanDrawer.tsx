@@ -70,9 +70,9 @@ function FilterSummary({ filters }: { filters: DpaApiRequest }) {
   if (sections.length === 0) return <p style={styles.noFilters}>No filters set.</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+    <div style={styles.filterGrid}>
       {sections.map((section) => (
-        <div key={section.label}>
+        <div key={section.label} style={styles.filterSection}>
           <div style={styles.filterLabel}>{section.label}</div>
           <div style={styles.filterTags}>
             {section.values.map((v) => (
@@ -100,43 +100,37 @@ export default function PlanDrawer({ plan, isOpen, onToggle }: PlanDrawerProps) 
   });
 
   return (
-    <div style={styles.wrapper}>
+    <div style={styles.accordion}>
       <button
         onClick={onToggle}
-        style={styles.toggleBtn}
-        title={isOpen ? "Hide plan details" : "Show plan details"}
-        aria-label={isOpen ? "Hide plan details" : "Show plan details"}
+        style={styles.header}
+        aria-expanded={isOpen}
       >
-        {isOpen ? "›" : "‹"}
+        <span style={styles.headerTitle}>Plan details</span>
+        <span style={styles.chevron}>{isOpen ? "▲" : "▼"}</span>
       </button>
 
       {isOpen && (
-        <div style={styles.panel}>
-          <h2 style={styles.planTitle}>{plan.title}</h2>
-          <p style={styles.createdDate}>Created {createdDate}</p>
-
-          {plan.url && (
-            <div style={styles.section}>
-              <div style={styles.sectionLabel}>External URL</div>
+        <div style={styles.body}>
+          <div style={styles.meta}>
+            <span style={styles.metaItem}>Created {createdDate}</span>
+            {plan.url && (
               <a
                 href={plan.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={styles.link}
               >
-                {plan.url}
+                External URL ↗
               </a>
-            </div>
-          )}
+            )}
+          </div>
 
           {plan.description && (
-            <div style={styles.section}>
-              <div style={styles.sectionLabel}>Description</div>
-              <p style={styles.description}>{plan.description}</p>
-            </div>
+            <p style={styles.description}>{plan.description}</p>
           )}
 
-          <div style={styles.section}>
+          <div style={styles.filterBlock}>
             <div style={styles.sectionLabel}>Filter configuration</div>
             <FilterSummary filters={filters} />
           </div>
@@ -147,59 +141,52 @@ export default function PlanDrawer({ plan, isOpen, onToggle }: PlanDrawerProps) 
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrapper: {
-    display: "flex",
-    flexShrink: 0,
-    gap: "0.5rem",
-    alignItems: "flex-start",
-  },
-  toggleBtn: {
-    width: "24px",
-    padding: "0.5rem 0.25rem",
-    background: "#f0f0f0",
-    border: "1px solid #e5e5e5",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "1rem",
-    color: "#555",
-    flexShrink: 0,
-  },
-  panel: {
-    width: "280px",
-    flexShrink: 0,
-    padding: "1.25rem",
-    background: "#fafafa",
+  accordion: {
     border: "1px solid #e5e5e5",
     borderRadius: "8px",
-    overflowY: "auto",
-    maxHeight: "80vh",
+    overflow: "hidden",
+    marginBottom: "1.5rem",
   },
-  planTitle: {
-    fontSize: "1rem",
-    fontWeight: 700,
-    margin: "0 0 0.25rem 0",
-    color: "#171717",
+  header: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0.75rem 1.25rem",
+    background: "#f5f5f5",
+    border: "none",
+    cursor: "pointer",
+    textAlign: "left",
   },
-  createdDate: {
-    fontSize: "0.75rem",
-    color: "#999",
-    margin: "0 0 1rem 0",
-  },
-  section: {
-    marginBottom: "1rem",
-  },
-  sectionLabel: {
-    fontSize: "0.7rem",
+  headerTitle: {
+    fontSize: "0.875rem",
     fontWeight: 600,
-    textTransform: "uppercase",
+    color: "#444",
+  },
+  chevron: {
+    fontSize: "0.65rem",
     color: "#888",
-    letterSpacing: "0.05em",
-    marginBottom: "0.375rem",
+  },
+  body: {
+    padding: "1rem 1.25rem",
+    background: "white",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.75rem",
+  },
+  meta: {
+    display: "flex",
+    gap: "1.5rem",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  metaItem: {
+    fontSize: "0.8rem",
+    color: "#666",
   },
   link: {
-    color: "#2563eb",
     fontSize: "0.8rem",
-    wordBreak: "break-all",
+    color: "#2563eb",
     textDecoration: "none",
   },
   description: {
@@ -208,16 +195,33 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     lineHeight: 1.5,
   },
-  noFilters: {
-    fontSize: "0.8rem",
-    color: "#999",
-    margin: 0,
+  filterBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+  },
+  sectionLabel: {
+    fontSize: "0.7rem",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    color: "#888",
+    letterSpacing: "0.05em",
+  },
+  filterGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "1rem",
+  },
+  filterSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.25rem",
+    minWidth: "120px",
   },
   filterLabel: {
     fontSize: "0.75rem",
     fontWeight: 500,
     color: "#444",
-    marginBottom: "0.25rem",
   },
   filterTags: {
     display: "flex",
@@ -231,5 +235,10 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "4px",
     fontSize: "0.7rem",
     color: "#444",
+  },
+  noFilters: {
+    fontSize: "0.8rem",
+    color: "#999",
+    margin: 0,
   },
 };

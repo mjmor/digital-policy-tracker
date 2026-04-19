@@ -208,10 +208,7 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
       {!showCreateForm && (
         <>
           {selectedPlanId ? (
-            <div style={styles.contentRow}>
-              <div style={styles.queueArea}>
-                <ReviewQueue searchPlanId={selectedPlanId} />
-              </div>
+            <>
               {selectedPlan && (
                 <PlanDrawer
                   plan={selectedPlan}
@@ -219,7 +216,8 @@ export default function DashboardClient({ user: _user }: DashboardClientProps) {
                   onToggle={() => setDrawerOpen((prev) => !prev)}
                 />
               )}
-            </div>
+              <ReviewQueue searchPlanId={selectedPlanId} />
+            </>
           ) : (
             <div style={styles.emptyState}>
               <p style={styles.emptyMsg}>No search plans yet.</p>
@@ -341,15 +339,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "6px",
     fontSize: "0.875rem",
     cursor: "pointer",
-  },
-  contentRow: {
-    display: "flex",
-    gap: "1rem",
-    alignItems: "flex-start",
-  },
-  queueArea: {
-    flex: 1,
-    minWidth: 0,
   },
   emptyState: {
     padding: "4rem 2rem",
